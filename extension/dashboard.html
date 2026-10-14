@@ -1,0 +1,917 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Session AI Credits</title>
+  <style>
+    :root {
+      --chart-1: #64b5f6;
+      --chart-2: #b39ddb;
+      --chart-3: #4dba87;
+      --chart-4: #e7b556;
+      --chart-5: #45bfc2;
+      --chart-6: #bcc9d6;
+      --chart-7: #65778b;
+      --panel: #081522;
+      --panel-raised: #0d1d2d;
+      --panel-border: rgba(110, 205, 255, .2);
+      --text: #e5f4ff;
+      --muted: #b0c8d9;
+    }
+    * { box-sizing: border-box; }
+    * {
+      scrollbar-color: rgba(0, 229, 255, .48) rgba(5, 13, 22, .72);
+      scrollbar-width: thin;
+    }
+    *::-webkit-scrollbar { width: 9px; height: 9px; }
+    *::-webkit-scrollbar-track {
+      border: 1px solid rgba(110, 205, 255, .1);
+      border-radius: 8px;
+      background: rgba(5, 13, 22, .72);
+    }
+    *::-webkit-scrollbar-thumb {
+      border: 2px solid rgba(5, 13, 22, .72);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(0, 229, 255, .7), rgba(75, 134, 180, .62));
+    }
+    *::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #53f1ff, #7abaff);
+      box-shadow: 0 0 9px rgba(0, 229, 255, .3);
+    }
+    html, body { width: 100%; height: 100%; min-width: 320px; margin: 0; }
+    body {
+      height: 100dvh;
+      min-height: 620px;
+      overflow: auto;
+      background:
+        radial-gradient(ellipse at 12% -15%, rgba(0, 229, 255, .12), transparent 38%),
+        radial-gradient(ellipse at 95% 4%, rgba(167, 139, 250, .1), transparent 32%),
+        #050d16;
+      color: var(--text);
+      font: var(--text-body-medium, 13px)/1.4 var(--font-sans, system-ui, sans-serif);
+    }
+    main {
+      display: grid;
+      grid-template-rows: auto auto minmax(230px, .9fr) minmax(220px, 1.1fr);
+      gap: 10px;
+      width: 100%;
+      height: max(100dvh, 620px);
+      min-height: 620px;
+      padding: 12px;
+      margin: 0 auto;
+    }
+    .summary { min-width: 0; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .card, .chart-card, .rounds-panel {
+      min-width: 0;
+      border: 1px solid var(--panel-border);
+      border-radius: 9px;
+      background: linear-gradient(145deg, rgba(13, 29, 45, .96), rgba(7, 19, 31, .98));
+      box-shadow: inset 0 1px rgba(255, 255, 255, .025), 0 0 14px rgba(0, 229, 255, .035);
+    }
+    .card { min-height: 64px; padding: 9px 12px; }
+    .label { color: var(--muted); font-size: 11px; }
+    .value {
+      margin-top: 2px;
+      overflow-wrap: anywhere;
+      color: #f3fbff;
+      font-size: clamp(16px, 2.1vw, 21px);
+      font-weight: 650;
+      line-height: 1.25;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 12px rgba(0, 229, 255, .24);
+    }
+    .summary-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      margin-bottom: 6px;
+    }
+    #status {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      color: #8be9f5;
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #status:empty { display: none; }
+    #status[data-kind="warn"] { color: #ffd166; }
+    #status[data-kind="error"] { color: #ff7b9c; }
+    button {
+      flex: 0 0 auto;
+      border: 1px solid rgba(0, 229, 255, .32);
+      border-radius: 6px;
+      padding: 4px 10px;
+      background: rgba(0, 229, 255, .07);
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+      transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+    }
+    button:hover {
+      border-color: rgba(0, 229, 255, .72);
+      background: rgba(0, 229, 255, .13);
+      box-shadow: 0 0 12px rgba(0, 229, 255, .12);
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .icon-button {
+      display: grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border-radius: 8px;
+      border-color: rgba(100, 181, 246, .42);
+      background: rgba(100, 181, 246, .08);
+      color: #8bd4ff;
+    }
+    .icon-button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-button:hover { border-color: rgba(139, 212, 255, .82); background: rgba(100, 181, 246, .18); color: #d8f2ff; }
+    .icon-button svg { filter: drop-shadow(0 0 3px rgba(100, 181, 246, .35)); }
+    .icon-button.is-refreshing svg { animation: spin .9s linear infinite; }
+    .tabbar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+      border-bottom: 1px solid var(--panel-border);
+    }
+    .tab {
+      position: relative;
+      padding: 7px 14px 9px;
+      border: 0;
+      border-radius: 6px 6px 0 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tab:hover { background: rgba(0, 229, 255, .06); color: var(--text); box-shadow: none; }
+    .tab[aria-selected="true"] { color: #b9f8ff; text-shadow: 0 0 10px rgba(0, 229, 255, .38); }
+    .tab[aria-selected="true"]::after {
+      position: absolute;
+      right: 10px;
+      bottom: -1px;
+      left: 10px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--chart-1);
+      box-shadow: 0 0 10px var(--chart-1);
+      content: "";
+    }
+    .tab:focus-visible, button:focus-visible { outline: 2px solid var(--chart-1); outline-offset: 2px; }
+    .tab-hint { margin-left: auto; overflow: hidden; color: #607e95; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .tab-panels { min-width: 0; min-height: 0; overflow: hidden; }
+    .tab-panel {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+    .tab-panel[hidden] { display: none; }
+    .chart-card {
+      position: relative;
+      container-type: inline-size;
+      container-name: chart;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 14px;
+      overflow: hidden;
+    }
+    .chart-card::before {
+      position: absolute;
+      top: 0;
+      right: 18px;
+      left: 18px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0, 229, 255, .58), transparent);
+      content: "";
+    }
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-width: 0;
+      margin-bottom: 10px;
+    }
+    h2 {
+      min-width: 0;
+      margin: 0;
+      color: #f0fbff;
+      font-size: 14px;
+      font-weight: 650;
+      line-height: 1.3;
+    }
+    .meta {
+      min-width: 0;
+      color: #a4bdce;
+      font-size: 11px;
+      line-height: 1.35;
+    }
+    .chart-content {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      min-height: 0;
+      flex: 1;
+    }
+    .meter-summary {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+      color: #9db7ca;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .meter-share { color: #f0fbff; font-size: 12px; font-weight: 650; }
+    .meter-total { color: #9db7ca; }
+    .stacked-track {
+      display: flex;
+      align-items: stretch;
+      width: 100%;
+      height: 14px;
+      margin-bottom: 7px;
+      overflow: visible;
+      border-radius: 7px;
+      background: rgba(129, 170, 197, .14);
+      isolation: isolate;
+    }
+    .meter-segment {
+      position: relative;
+      flex: 0 1 0;
+      min-width: 0;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      border-radius: 2px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+      transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+      cursor: pointer;
+    }
+    .meter-segment:first-child { border-radius: 7px 2px 2px 7px; }
+    .meter-segment:last-child { border-radius: 2px 7px 7px 2px; }
+    .meter-segment.is-active {
+      z-index: 1;
+      transform: scaleY(1.28);
+      filter: brightness(1.3);
+      box-shadow: 0 0 12px currentColor, inset 0 0 0 1px rgba(255, 255, 255, .35);
+    }
+    .meter-segment:focus-visible { z-index: 2; outline: 2px solid #e5fbff; outline-offset: 2px; }
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-height: 0;
+      max-height: 100%;
+      flex: 1;
+      overflow: auto;
+      padding: 0 3px 2px 0;
+      overscroll-behavior: contain;
+    }
+    .legend-row {
+      display: grid;
+      grid-template-columns: 9px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      padding: 6px 6px;
+      border-bottom: 1px solid rgba(110, 205, 255, .12);
+      border-radius: 5px;
+      transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+      outline: none;
+    }
+    .legend-row.is-active, .legend-row:focus-visible {
+      position: relative;
+      z-index: 1;
+      transform: scale(1.015);
+      background: rgba(0, 229, 255, .075);
+      box-shadow: 0 0 10px rgba(0, 229, 255, .1);
+    }
+    .swatch { width: 9px; height: 9px; border-radius: 3px; box-shadow: 0 0 9px currentColor; }
+    .legend-label { overflow: hidden; color: #d9eaf5; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .legend-value { color: #f3fbff; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bar-track {
+      height: 5px;
+      margin: 5px 0 0 17px;
+      overflow: hidden;
+      border-radius: 5px;
+      background: rgba(129, 170, 197, .12);
+    }
+    .bar-fill {
+      display: block;
+      width: 0;
+      height: 100%;
+      border-radius: inherit;
+      box-shadow: 0 0 9px currentColor;
+      transition: width .8s cubic-bezier(.2,.8,.2,1);
+    }
+    .chart-footnote {
+      margin-top: 10px;
+      color: #a4bdce;
+      font-size: 11px;
+    }
+    .bars {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+      min-height: 0;
+      flex: 1;
+      overflow: auto;
+      scrollbar-width: thin;
+    }
+    .bar-row { min-width: 0; }
+    .bar-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      min-width: 0;
+      font-size: 12px;
+    }
+    .bar-name { overflow: hidden; color: #c8e1ef; font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+    .bar-value { color: #e3f7ff; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .bar-track { height: 8px; margin: 6px 0 0; }
+    .bar-sub { margin-top: 4px; color: #7e9bb2; font-size: 10px; }
+    .empty { padding: 14px 6px; color: #7892a6; font-size: 11px; text-align: center; }
+    .rounds-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      padding: 10px;
+      overflow: hidden;
+    }
+    .rounds-heading { flex: 0 0 auto; margin-bottom: 5px; }
+    #history-status { margin-top: 2px; color: #7892a6; font-size: 10px; }
+    #history-status[data-kind="warn"] { color: #ffd166; }
+    .rounds-scroll { min-height: 0; flex: 1; overflow: auto; }
+    .rounds-scroll { scrollbar-gutter: stable; overscroll-behavior: contain; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 5px 6px; border-bottom: 1px solid rgba(110, 205, 255, .12); vertical-align: top; }
+    th { color: #7e9bb2; font-size: 10px; font-weight: 600; }
+    .rounds-table { font-size: 11px; }
+    .rounds-table th {
+      position: sticky;
+      z-index: 1;
+      top: 0;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      background: #0b1a29;
+    }
+    .round-label { min-width: 140px; }
+    .round-toggle {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      margin-right: 5px;
+      border-radius: 5px;
+      vertical-align: middle;
+    }
+    .coverage, .credit-cell, .numeric { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .expanded-row td { padding: 8px; background: rgba(4, 13, 22, .75); }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(160px, 1fr);
+      gap: 10px;
+    }
+    .detail-title { margin: 0 0 4px; color: #b0c8d9; font-size: 11px; font-weight: 600; }
+    .detail-table { font-size: 10px; }
+    .detail-table th, .detail-table td { padding: 4px; }
+    .activity-note { margin-top: 5px; color: #7892a6; font-size: 10px; }
+    @keyframes orbit { to { transform: rotate(360deg); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes halo {
+      0%, 100% { box-shadow: 0 0 23px rgba(0, 229, 255, .18), 0 0 52px rgba(0, 229, 255, .06), inset 0 0 22px rgba(0, 0, 0, .48); }
+      50% { box-shadow: 0 0 31px rgba(0, 229, 255, .29), 0 0 68px rgba(0, 229, 255, .1), inset 0 0 22px rgba(0, 0, 0, .48); }
+    }
+    @media (max-width: 620px) {
+      .chart-card { padding: 10px; }
+      .section-heading { margin-bottom: 8px; }
+    }
+    @media (max-width: 520px) {
+      main {
+        height: max(100dvh, 900px);
+        grid-template-rows: auto auto minmax(450px, .9fr) minmax(270px, 1.1fr);
+      }
+      .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .card { min-height: 58px; padding: 7px 9px; }
+      .tab-panels { min-height: 450px; }
+      .tab-panel { grid-template-columns: 1fr; grid-template-rows: repeat(2, minmax(0, 1fr)); }
+      .detail-grid { grid-template-columns: 1fr; }
+    }
+    @container chart (max-width: 380px) {
+      .legend-row { padding: 5px 4px; }
+      .legend-row { gap: 6px; }
+      .legend-label, .legend-value { font-size: 12px; }
+    }
+    @container chart (max-width: 340px) {
+      .legend-row { gap: 4px; }
+      .legend-label, .legend-value { font-size: 11px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="summary">
+      <div class="summary-toolbar">
+        <div id="status" role="status" aria-live="polite"></div>
+        <button id="refresh" class="icon-button" type="button" aria-label="刷新" title="刷新">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4.7 9a7.5 7.5 0 0 1 12.7-2L20 12M4 17v-5h5m10.3 3a7.5 7.5 0 0 1-12.7 2L4 12"/></svg>
+        </button>
+      </div>
+      <div class="cards">
+        <div class="card"><div class="label">AI Credits 总用量</div><div id="total" class="value">—</div></div>
+        <div class="card"><div class="label">模型调用数</div><div id="calls" class="value">—</div></div>
+        <div class="card"><div class="label">服务端输入 Token</div><div id="input-tokens" class="value">—</div></div>
+        <div class="card"><div class="label">服务端输出 Token</div><div id="output-tokens" class="value">—</div></div>
+      </div>
+    </div>
+
+    <div class="tabbar" role="tablist" aria-label="用量图表">
+      <button id="tab-tokens" class="tab" type="button" role="tab" aria-selected="true" aria-controls="panel-tokens" tabindex="0">Token 分类</button>
+      <button id="tab-models" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panel-models" tabindex="-1">模型与 Agent</button>
+      <span class="tab-hint">上下文快照为运行时估算，不等同于账单输入 Token</span>
+    </div>
+
+    <div class="tab-panels">
+      <div id="panel-tokens" class="tab-panel" role="tabpanel" aria-labelledby="tab-tokens">
+        <section class="chart-card">
+          <div class="section-heading">
+            <h2>当前</h2>
+            <div id="current-context-meta" class="meta">读取中…</div>
+          </div>
+          <div class="meter-summary"><span id="current-usage-share" class="meter-share">—</span><span id="current-limit" class="meter-total">—</span></div>
+          <div id="current-track" class="stacked-track" role="group" aria-label="当前上下文 Token 分类图"></div>
+          <div class="chart-content">
+            <div id="current-legend" class="legend"></div>
+          </div>
+          <div class="chart-footnote">当前模型上下文窗口的占用快照；分类明细合计为窗口 Token。</div>
+        </section>
+
+        <section class="chart-card">
+          <div class="section-heading">
+            <h2>历史</h2>
+            <div id="context-history-meta" class="meta">等待上下文快照</div>
+          </div>
+          <div class="meter-summary"><span id="history-usage-share" class="meter-share">100%</span><span id="history-total" class="meter-total">—</span></div>
+          <div id="history-track" class="stacked-track" role="group" aria-label="历史快照累计 Token 分类图"></div>
+          <div class="chart-content">
+            <div id="history-legend" class="legend"></div>
+          </div>
+          <div class="chart-footnote">按已记录的请求前快照累计；历史覆盖率见下方明细区。</div>
+        </section>
+      </div>
+
+      <div id="panel-models" class="tab-panel" role="tabpanel" aria-labelledby="tab-models" hidden>
+        <section class="chart-card">
+          <div class="section-heading"><h2>按模型</h2><div class="meta">AI Credits 与调用量</div></div>
+          <div id="models" class="bars"></div>
+        </section>
+        <section class="chart-card">
+          <div class="section-heading"><h2>按 Agent</h2><div class="meta">AI Credits 与调用量</div></div>
+          <div id="agents" class="bars"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="rounds-panel">
+      <div class="section-heading rounds-heading">
+        <div>
+          <h2>轮次明细</h2>
+          <div id="history-status"></div>
+        </div>
+      </div>
+      <div class="rounds-scroll">
+        <table class="rounds-table">
+          <thead><tr><th>时间 / Agent</th><th>调用覆盖</th><th>AI Credits</th><th>输入 Token</th><th>输出 Token</th><th>交互 ID</th></tr></thead>
+          <tbody id="rounds"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const integerFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+    const compactFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+    const compactUnits = [
+      { threshold: 1e12, divisor: 1e12, suffix: "T" },
+      { threshold: 1e9, divisor: 1e9, suffix: "B" },
+      { threshold: 1e6, divisor: 1e6, suffix: "M" },
+      { threshold: 1e3, divisor: 1e3, suffix: "K" },
+    ];
+    const creditFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 9 });
+    const categoryRows = [
+      ["systemPrompt", "系统提示"],
+      ["customInstructions", "自定义指令"],
+      ["systemTools", "内置工具"],
+      ["mcpTools", "MCP 工具"],
+      ["messages", "对话消息"],
+    ];
+    const capacityRows = [
+      ["freeSpace", "空闲空间"],
+      ["buffer", "缓冲区"],
+    ];
+    const chartColors = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)", "var(--chart-7)"];
+    const categoryColors = {
+      systemPrompt: "var(--chart-1)",
+      customInstructions: "var(--chart-2)",
+      systemTools: "var(--chart-3)",
+      mcpTools: "var(--chart-4)",
+      messages: "var(--chart-5)",
+      freeSpace: "var(--chart-6)",
+      buffer: "var(--chart-7)",
+    };
+    const tabs = [
+      { button: $("#tab-tokens"), panel: $("#panel-tokens") },
+      { button: $("#tab-models"), panel: $("#panel-models") },
+    ];
+    let refreshing = false;
+
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      return node;
+    }
+    function number(value) {
+      return typeof value === "number" && Number.isFinite(value) ? value : 0;
+    }
+    function formatInteger(value) {
+      return integerFormat.format(number(value));
+    }
+    function formatCompact(value) {
+      const amount = number(value);
+      const absolute = Math.abs(amount);
+      let unitIndex = compactUnits.findIndex((unit) => absolute >= unit.threshold);
+      if (unitIndex < 0) return formatInteger(amount);
+      let scaled = amount / compactUnits[unitIndex].divisor;
+      if (Math.abs(scaled) >= 999.95 && unitIndex > 0) {
+        unitIndex -= 1;
+        scaled = amount / compactUnits[unitIndex].divisor;
+      }
+      return compactFormat.format(scaled) + compactUnits[unitIndex].suffix;
+    }
+    function formatCredits(nanoAiu) {
+      return typeof nanoAiu === "number" && Number.isFinite(nanoAiu)
+        ? creditFormat.format(nanoAiu / 1000000000)
+        : "未提供";
+    }
+    function categoryData(values, includeCapacity = false) {
+      const rows = categoryRows.map(([key, label]) => ({ key, label, tokens: number(values && values[key]) }));
+      if (includeCapacity) {
+        capacityRows.forEach(([key, label]) => rows.push({ key, label, tokens: number(values && values[key]) }));
+      }
+      return rows;
+    }
+    function renderStackedChart(track, legend, rows, denominator) {
+      const visibleRows = (rows || []).map((row) => ({ ...row, tokens: number(row.tokens) }));
+      const chartTotal = visibleRows.reduce((sum, row) => sum + row.tokens, 0);
+      const scaleTotal = Math.max(number(denominator), chartTotal);
+      track.replaceChildren();
+      legend.replaceChildren();
+      if (!visibleRows.length || scaleTotal <= 0) {
+        legend.append(element("div", "empty", "暂无可用分类数据"));
+        return;
+      }
+      visibleRows.forEach((row, index) => {
+        const color = categoryColors[row.key] || chartColors[index % chartColors.length];
+        const share = row.tokens / scaleTotal * 100;
+        const line = element("div", "legend-row");
+        line.dataset.category = row.key;
+        line.tabIndex = 0;
+        line.title = row.label + " · " + formatInteger(row.tokens) + " tokens";
+        const swatch = element("span", "swatch");
+        swatch.style.background = color;
+        swatch.style.color = color;
+        const label = element("span", "legend-label", row.label + " " + share.toFixed(0) + "%");
+        const value = element("span", "legend-value", formatCompact(row.tokens));
+        value.title = formatInteger(row.tokens) + " tokens";
+        line.setAttribute("aria-label", row.label + " " + share.toFixed(0) + "%，" + formatInteger(row.tokens) + " tokens");
+        line.append(swatch, label, value);
+        legend.append(line);
+
+        if (row.tokens > 0) {
+          const segment = element("button", "meter-segment");
+          segment.type = "button";
+          segment.dataset.category = row.key;
+          segment.style.flex = "0 0 " + Math.min(100, share).toFixed(3) + "%";
+          segment.style.backgroundColor = color;
+          segment.style.color = color;
+          segment.title = line.title;
+          segment.setAttribute("aria-label", line.getAttribute("aria-label"));
+          track.append(segment);
+        }
+      });
+    }
+    function linkCategoryHighlights(track, legend) {
+      const groups = [track, legend];
+      const highlight = (key) => groups.forEach((group) => {
+        group.querySelectorAll("[data-category]").forEach((node) => {
+          node.classList.toggle("is-active", node.dataset.category === key);
+        });
+      });
+      const clear = () => highlight("");
+      groups.forEach((group) => {
+        group.addEventListener("pointerover", (event) => {
+          const item = event.target.closest("[data-category]");
+          if (item && group.contains(item)) highlight(item.dataset.category);
+        });
+        group.addEventListener("pointerleave", clear);
+        group.addEventListener("focusin", (event) => {
+          const item = event.target.closest("[data-category]");
+          if (item && group.contains(item)) highlight(item.dataset.category);
+        });
+        group.addEventListener("focusout", (event) => {
+          const next = event.relatedTarget instanceof Element ? event.relatedTarget.closest("[data-category]") : null;
+          if (next && groups.some((container) => container.contains(next))) highlight(next.dataset.category);
+          else clear();
+        });
+      });
+    }
+    linkCategoryHighlights($("#current-track"), $("#current-legend"));
+    linkCategoryHighlights($("#history-track"), $("#history-legend"));
+    function renderBars(body, rows, emptyMessage) {
+      body.replaceChildren();
+      if (!rows || !rows.length) {
+        body.append(element("div", "empty", emptyMessage));
+        return;
+      }
+      const maxCredits = Math.max(0, ...rows.map((row) => number(row.nanoAiu)));
+      rows.forEach((item, index) => {
+        const wrapper = element("div", "bar-row");
+        const line = element("div", "bar-line");
+        line.append(element("span", "bar-name", item.label), element("span", "bar-value", formatCredits(item.nanoAiu) + " Credits"));
+        const track = element("div", "bar-track");
+        const fill = element("span", "bar-fill");
+        fill.style.width = maxCredits > 0 ? String(number(item.nanoAiu) / maxCredits * 100) + "%" : "0%";
+        fill.style.background = chartColors[index % chartColors.length];
+        fill.style.color = chartColors[index % chartColors.length];
+        track.append(fill);
+        wrapper.append(line, track, element("div", "bar-sub", formatInteger(item.calls) + " 次 · 输入 " + formatCompact(item.inputTokens) + " / 输出 " + formatCompact(item.outputTokens) + " tokens"));
+        body.append(wrapper);
+      });
+    }
+    function appendDetailTable(parent, title, headers, rows, emptyMessage) {
+      const block = element("div");
+      block.append(element("div", "detail-title", title));
+      if (!rows || !rows.length) {
+        block.append(element("div", "empty", emptyMessage));
+        parent.append(block);
+        return;
+      }
+      const table = element("table", "detail-table");
+      const head = element("thead");
+      const header = element("tr");
+      headers.forEach((label) => header.append(element("th", "", label)));
+      head.append(header);
+      const body = element("tbody");
+      for (const values of rows) {
+        const row = element("tr");
+        values.forEach((value, index) => row.append(element("td", index > 0 && typeof value === "number" ? "numeric" : "", value)));
+        body.append(row);
+      }
+      table.append(head, body);
+      block.append(table);
+      parent.append(block);
+    }
+    function buildRoundDetails(round) {
+      const grid = element("div", "detail-grid");
+      const calls = round.calls || [];
+      const callRows = calls.map((call) => [
+        new Date(call.timestamp).toLocaleTimeString(),
+        call.modelDisplayName || call.model || "未知模型",
+        call.aiCreditsStatus === "unavailable"
+          ? "不可用"
+          : formatCredits(call.nanoAiu) + (call.aiCreditsStatus === "complete" ? "" : "（小计）"),
+        formatInteger(call.inputTokens),
+        formatInteger(call.outputTokens),
+        formatInteger(call.cacheReadTokens) + " / " + formatInteger(call.cacheWriteTokens),
+        call.interactionType || call.initiator || "未分类",
+      ]);
+      appendDetailTable(grid, "模型调用明细", ["时间", "模型", "AI Credits", "输入", "输出", "缓存读/写", "调用类型"], callRows,
+        "运行时未保留此轮的逐调用事件，无法从累计数据反推。");
+      const contextRows = (round.contextTokens || []).map((item) => [item.label, formatInteger(item.tokens)]);
+      const contextBlock = element("div");
+      appendDetailTable(contextBlock, "请求前上下文快照（运行时 Tokenization 统计）", ["分类", "Token"], contextRows,
+        "此轮没有可用的上下文快照。");
+      const activity = [];
+      if (round.toolSummary) {
+        const toolLabels = { fileQueries: "文件/代码查询", mcp: "MCP 工具", other: "其他工具" };
+        for (const [label, count] of Object.entries(round.toolSummary)) {
+          if (count) activity.push((toolLabels[label] || label) + " " + count);
+        }
+      }
+      if (round.skills && round.skills.length) activity.push("Skills: " + round.skills.join("、"));
+      if (activity.length) contextBlock.append(element("div", "activity-note", "活动：" + activity.join("；")));
+      grid.append(contextBlock);
+      return grid;
+    }
+    const expandedRounds = new Set();
+    function roundKey(round) {
+      return [round.startedAt, round.agentLabel, round.interactionId || ""].map((part) => String(part)).join("\u001f");
+    }
+    function setRoundExpanded(row, round, toggle, expanded) {
+      const key = roundKey(round);
+      const detailRow = row.nextElementSibling;
+      if (expanded) {
+        expandedRounds.add(key);
+        if (!detailRow || !detailRow.classList.contains("expanded-row") || detailRow.dataset.roundKey !== key) {
+          const nextRow = element("tr", "expanded-row");
+          nextRow.dataset.roundKey = key;
+          const detailCell = element("td");
+          detailCell.colSpan = 6;
+          detailCell.append(buildRoundDetails(round));
+          nextRow.append(detailCell);
+          row.after(nextRow);
+        }
+        toggle.textContent = "−";
+        toggle.setAttribute("aria-expanded", "true");
+        toggle.setAttribute("aria-label", "收起模型调用明细");
+        return;
+      }
+      expandedRounds.delete(key);
+      if (detailRow && detailRow.classList.contains("expanded-row") && detailRow.dataset.roundKey === key) {
+        detailRow.remove();
+      }
+      toggle.textContent = "+";
+      toggle.setAttribute("aria-expanded", "false");
+      toggle.setAttribute("aria-label", "展开模型调用明细");
+    }
+    function renderRounds(rounds) {
+      const body = $("#rounds");
+      body.replaceChildren();
+      if (!rounds || !rounds.length) {
+        expandedRounds.clear();
+        const row = element("tr");
+        const cell = element("td", "empty", "尚无对话轮次数据");
+        cell.colSpan = 6;
+        row.append(cell);
+        body.append(row);
+        return;
+      }
+      const currentKeys = new Set(rounds.map(roundKey));
+      for (const key of expandedRounds) {
+        if (!currentKeys.has(key)) expandedRounds.delete(key);
+      }
+      for (const round of rounds) {
+        const key = roundKey(round);
+        const row = element("tr");
+        const labelCell = element("td", "round-label");
+        const toggle = element("button", "round-toggle", "+");
+        toggle.type = "button";
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-label", "展开模型调用明细");
+        labelCell.append(toggle, document.createTextNode(new Date(round.startedAt).toLocaleString() + " · " + round.agentLabel));
+        row.append(labelCell);
+        row.append(element("td", "coverage", round.observedCalls + " / " + round.expectedCalls));
+        const creditText = round.observedCalls === 0
+          ? "未保留"
+          : formatCredits(round.nanoAiu) + (round.creditStatus === "complete" ? "" : "（小计）");
+        row.append(element("td", "credit-cell", creditText));
+        const inputCell = element("td", "numeric", formatCompact(round.inputTokens));
+        inputCell.title = formatInteger(round.inputTokens);
+        const outputCell = element("td", "numeric", formatCompact(round.outputTokens));
+        outputCell.title = formatInteger(round.outputTokens);
+        row.append(inputCell, outputCell);
+        row.append(element("td", "", round.interactionId || "未关联"));
+        body.append(row);
+        setRoundExpanded(row, round, toggle, expandedRounds.has(key));
+        toggle.addEventListener("click", () => {
+          setRoundExpanded(row, round, toggle, !expandedRounds.has(key));
+        });
+      }
+    }
+    function selectTab(index, focusButton = false) {
+      tabs.forEach((tab, tabIndex) => {
+        const selected = tabIndex === index;
+        tab.button.setAttribute("aria-selected", String(selected));
+        tab.button.tabIndex = selected ? 0 : -1;
+        tab.panel.hidden = !selected;
+      });
+      if (focusButton) tabs[index].button.focus();
+    }
+    tabs.forEach((tab, index) => {
+      tab.button.addEventListener("click", () => selectTab(index));
+      tab.button.addEventListener("keydown", (event) => {
+        let nextIndex = index;
+        if (event.key === "ArrowRight") nextIndex = (index + 1) % tabs.length;
+        else if (event.key === "ArrowLeft") nextIndex = (index + tabs.length - 1) % tabs.length;
+        else if (event.key === "Home") nextIndex = 0;
+        else if (event.key === "End") nextIndex = tabs.length - 1;
+        else return;
+        event.preventDefault();
+        selectTab(nextIndex, true);
+      });
+    });
+    function render(data) {
+      const metrics = data.metrics;
+      const status = metrics.aiCreditsStatus || "unavailable";
+      const statusMessages = {
+        partial: "累计 Credits 为已报告小计",
+        unavailable: "运行时未提供 Credits 总量",
+      };
+      $("#status").textContent = status === "complete" ? "" : (statusMessages[status] || "Credits 状态未知");
+      $("#status").dataset.kind = status === "complete" ? "" : "warn";
+      $("#total").textContent = status === "unavailable" ? "不可用" : formatCredits(metrics.totalNanoAiu);
+      $("#calls").textContent = formatInteger(metrics.modelCallCount);
+      $("#input-tokens").textContent = formatCompact(metrics.inputTokens);
+      $("#input-tokens").title = formatInteger(metrics.inputTokens);
+      $("#output-tokens").textContent = formatCompact(metrics.outputTokens);
+      $("#output-tokens").title = formatInteger(metrics.outputTokens);
+
+      const current = data.currentContext;
+      const modelMaxOutput = number(data.modelCapacity && data.modelCapacity.maxOutputTokens);
+      const modelMaxContext = number(data.modelCapacity && data.modelCapacity.maxContextWindowTokens);
+      const modelCapacityAvailable = modelMaxOutput > 0 || modelMaxContext > 0;
+      $("#current-context-meta").textContent = current
+        ? (current.modelId || "当前模型") + " · " + formatCompact(current.totalTokens) + " tokens" + (modelCapacityAvailable ? "" : " · 窗口上限不可用")
+        : (data.contextError || "当前上下文快照不可用");
+      $("#current-context-meta").title = current ? formatInteger(current.totalTokens) + " tokens" : "";
+      const currentLimit = current ? number(current.limit) : 0;
+      let currentDenominator = currentLimit;
+      if (modelMaxOutput > 0) currentDenominator += modelMaxOutput;
+      else if (modelMaxContext > 0) currentDenominator = modelMaxContext;
+      if (modelMaxContext > 0) currentDenominator = Math.min(currentDenominator, modelMaxContext);
+      if (currentDenominator <= 0 && current) currentDenominator = current.totalTokens;
+      const currentShare = currentDenominator > 0 ? number(current.totalTokens) / currentDenominator * 100 : 0;
+      $("#current-usage-share").textContent = current ? Math.min(100, currentShare).toFixed(0) + "%" : "—";
+      $("#current-limit").textContent = current && currentDenominator > 0
+        ? formatCompact(current.totalTokens) + "/" + formatCompact(currentDenominator)
+        : "—";
+      $("#current-limit").title = current && currentDenominator > 0
+        ? formatInteger(current.totalTokens) + "/" + formatInteger(currentDenominator) + " tokens"
+        : "";
+      $("#current-track").setAttribute("aria-label", current
+        ? "当前上下文 Token 分类，占用 " + Math.min(100, currentShare).toFixed(0) + "%，总量 " + formatInteger(currentDenominator) + " tokens"
+        : "当前上下文 Token 分类不可用");
+      const currentCategories = current ? { ...current.categories } : null;
+      if (currentCategories && (modelMaxOutput > 0 || modelMaxContext > 0)) {
+        currentCategories.buffer = Math.max(0, currentDenominator - number(current.totalTokens) - number(currentCategories.freeSpace));
+      }
+      renderStackedChart($("#current-track"), $("#current-legend"),
+        current ? categoryData(currentCategories, true) : [], currentDenominator);
+
+      const history = data.contextUsage;
+      $("#context-history-meta").textContent = history.snapshots + " 个快照 · " + formatCompact(history.totalTokens) + " tokens";
+      $("#context-history-meta").title = formatInteger(history.totalTokens) + " tokens";
+      $("#history-usage-share").textContent = history.totalTokens > 0 ? "100%" : "—";
+      $("#history-total").textContent = formatCompact(history.totalTokens);
+      $("#history-track").setAttribute("aria-label", "已记录请求的上下文 Token 分类，共 " + formatInteger(history.totalTokens) + " tokens");
+      renderStackedChart($("#history-track"), $("#history-legend"),
+        categoryData(history.categories), history.totalTokens);
+      renderBars($("#models"), data.models, "暂无模型调用数据");
+      renderBars($("#agents"), data.agents, "暂无 Agent 调用数据");
+      renderRounds(data.rounds);
+
+      const coverage = data.coverage;
+      const missing = Math.max(0, coverage.modelCallCount - coverage.usageEvents);
+      let historyText = "逐调用事件 " + coverage.usageEvents + " / " + coverage.modelCallCount + " 次";
+      if (missing) historyText += " · " + missing + " 次历史明细无法从累计数据反推";
+      else historyText += " · 已观察到的调用均有明细";
+      if (coverage.historyTruncated) historyText += " · 本地事件账本已达保留上限";
+      if (data.ledgerError) historyText += " · 本地保存异常：" + data.ledgerError;
+      if (data.historyError) historyText += " · 历史读取异常：" + data.historyError;
+      $("#history-status").textContent = historyText;
+      $("#history-status").dataset.kind = missing || coverage.historyTruncated || data.ledgerError || data.historyError ? "warn" : "";
+    }
+    async function refresh() {
+      if (refreshing) return;
+      refreshing = true;
+      const button = $("#refresh");
+      button.disabled = true;
+      button.classList.add("is-refreshing");
+      try {
+        const response = await fetch("/api/dashboard", { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error || "读取 session 用量失败");
+        render(payload);
+      } catch (error) {
+        $("#status").textContent = "读取失败：" + (error instanceof Error ? error.message : String(error));
+        $("#status").dataset.kind = "error";
+      } finally {
+        refreshing = false;
+        button.disabled = false;
+        button.classList.remove("is-refreshing");
+      }
+    }
+    $("#refresh").addEventListener("click", refresh);
+    refresh();
+    window.setInterval(refresh, 5000);
+  </script>
+</body>
+</html>
